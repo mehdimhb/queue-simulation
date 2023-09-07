@@ -1,7 +1,8 @@
 class Customer:
-    def __init__(self, arrival_time, priority):
+    def __init__(self, id, arrival_time, priority):
+        self.id = id
         self.arrival_time = arrival_time
         self.priority = priority
 
-    def __str__(self):
-        return str(self.arrival_time)
+    def __repr__(self):
+        return str(self.id)
