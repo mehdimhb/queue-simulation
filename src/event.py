@@ -32,13 +32,16 @@ class EventHeap:
     def build_heap(self, array):
         last_idx = len(array) - 1
         start_from = self.get_parent_idx(last_idx)
+        heap = []
 
-        for idx, event in enumerate(array):
+        for idx, time in enumerate(array):
+            event = Event("Arrival", time)
             self.idx_of_events[event] = idx
+            heap.append(event)
 
-        for event in range(start_from, -1, -1):
-            self.sift_down(event, array)
-        return array
+        for i in range(start_from, -1, -1):
+            self.sift_down(i, heap)
+        return heap
 
     def pop(self):
         if self.is_empty():
