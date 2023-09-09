@@ -14,11 +14,12 @@ st.header("Settings")
 # general settings
 st.subheader("General Settings")
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
-system_capacity = col1.number_input("System Capacity", 0, step=1)
+queue_capacity = col1.number_input("Queue Capacity", 0, step=1)
 no_of_servers = col2.number_input("Number of Servers", 0, step=1)
 speed = col3.slider("Simulation Speed", 0, 3, step=1)
+duration = col4.slider("Simulation Duration", 100, 5000, step=100)
 
 # arrival settings
 st.subheader("Arrival Settings")
@@ -45,26 +46,31 @@ match arrival_distribution:
         arr_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=6)
         arr_dis_param2 = None
 
-arrival_batches = st.checkbox("Arrival could be in batch")
-if arrival_batches:
-    col1, col2, col3 = st.columns([2, 1, 1])
-    arrival_batch_distribution = col1.selectbox(
+arrival_batch = st.checkbox("Arrival could be in batch")
+if arrival_batch:
+    col1, col2, col3, col4 = st.columns([1, 2, 1, 1])
+    arrival_batch_probability = col1.number_input(
+        "Probability",
+        0.00, 1.00,
+        step=0.01,
+        help="Probability of an arrival be in batch")
+    arrival_batch_distribution = col2.selectbox(
         "Batch Size Distribution",
         ["Constant", "Discrete Uniform", "Normal", "Poisson"],
         key=102
     )
     match arrival_batch_distribution:
         case "Constant":
-            arr_batch_dis_param1 = col2.number_input("c", 1, step=1, key=7)
+            arr_batch_dis_param1 = col3.number_input("c", 1, step=1, key=7)
             arr_batch_dis_param2 = None
         case "Discrete Uniform":
-            arr_batch_dis_param1 = col2.number_input("a", 1, step=1, key=8)
-            arr_batch_dis_param2 = col3.number_input("b", arr_batch_dis_param1+1, step=1, key=9)
+            arr_batch_dis_param1 = col3.number_input("a", 1, step=1, key=8)
+            arr_batch_dis_param2 = col4.number_input("b", arr_batch_dis_param1+1, step=1, key=9)
         case "Normal":
-            arr_batch_dis_param1 = col2.number_input("mean", step=0.01, key=10)
-            arr_batch_dis_param2 = col3.number_input("sd", step=0.01, key=11)
+            arr_batch_dis_param1 = col3.number_input("mean", step=0.01, key=10)
+            arr_batch_dis_param2 = col4.number_input("sd", step=0.01, key=11)
         case "Poisson":
-            arr_batch_dis_param1 = col2.number_input("p", 0.01, step=0.01, key=12)
+            arr_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=12)
             arr_batch_dis_param2 = None
 
 # service settings
@@ -92,26 +98,32 @@ match service_distribution:
         ser_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=18)
         ser_dis_param2 = None
 
-service_batches = st.checkbox("Server could service to batch")
-if service_batches:
-    col1, col2, col3 = st.columns([2, 1, 1])
-    service_batch_distribution = col1.selectbox(
+service_batch = st.checkbox("Server could service to batch")
+if service_batch:
+    col1, col2, col3, col4 = st.columns([1, 2, 1, 1])
+    service_batch_probability = col1.number_input(
+        "Probability",
+        0.00, 1.00,
+        step=0.01,
+        help="Probability of a server select a batch of customers instead \
+            of one customer")
+    service_batch_distribution = col2.selectbox(
         "Batch Size Distribution",
         ["Constant", "Discrete Uniform", "Normal", "Poisson"],
         key=104
     )
     match service_batch_distribution:
         case "Constant":
-            ser_batch_dis_param1 = col2.number_input("c", 1, step=1, key=19)
+            ser_batch_dis_param1 = col3.number_input("c", 1, step=1, key=19)
             ser_batch_dis_param2 = None
         case "Discrete Uniform":
-            ser_batch_dis_param1 = col2.number_input("a", 1, step=1, key=20)
-            ser_batch_dis_param2 = col3.number_input("b", ser_batch_dis_param1+1, step=1, key=21)
+            ser_batch_dis_param1 = col3.number_input("a", 1, step=1, key=20)
+            ser_batch_dis_param2 = col4.number_input("b", ser_batch_dis_param1+1, step=1, key=21)
         case "Normal":
-            ser_batch_dis_param1 = col2.number_input("mean", step=0.01, key=22)
-            ser_batch_dis_param2 = col3.number_input("sd", step=0.01, key=23)
+            ser_batch_dis_param1 = col3.number_input("mean", step=0.01, key=22)
+            ser_batch_dis_param2 = col4.number_input("sd", step=0.01, key=23)
         case "Poisson":
-            ser_batch_dis_param1 = col2.number_input("p", 0.01, step=0.01, key=24)
+            ser_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=24)
             ser_batch_dis_param2 = None
 
 select_randomly = st.checkbox("Server could select customers randomly instead \
@@ -216,7 +228,9 @@ if renege:
 col1, col2, col3 = st.columns([2, 1, 1])
 discipline = col1.selectbox(
         "Queue behavior discipline",
-        ["FIFO", "LIFO", "SIRO"]
+        ["FIFO (First in first out)",
+         "LIFO (Last in first out)",
+         "SIRO (Service in random order)"]
 )
 t_star = col2.number_input(
     "t*",
@@ -251,6 +265,10 @@ if st.session_state.simulation == 0:
 
 if st.session_state.simulation == 1:
     st.write("")
-    st.button(
+    col1, col2, col3 = st.columns([1, 1, 6])
+    col1.button(
         "Pause", type="primary", on_click=set_state, args=[0]
+    )
+    col2.button(
+        "Reset", type="primary", on_click=set_state, args=[0]
     )
