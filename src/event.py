@@ -11,9 +11,9 @@ class Event:
 
 
 class EventHeap:
-    def __init__(self, array):
+    def __init__(self):
         self.idx_of_events = {}
-        self.heap = self.build_heap(array)
+        self.heap = []
 
     def __repr__(self):
         extra = ""
@@ -41,7 +41,7 @@ class EventHeap:
 
         for i in range(start_from, -1, -1):
             self.sift_down(i, heap)
-        return heap
+        self.heap = heap
 
     def pop(self):
         if self.is_empty():
