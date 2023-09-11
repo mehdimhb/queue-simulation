@@ -4,12 +4,6 @@ from numbers import Number
 from system import System
 from event import EventHeap
 from distributions import distribution
-import logging
-
-logging.basicConfig(
-    filename='file.log', filemode='w', level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S'
-)
 
 
 class Customer:
@@ -70,7 +64,7 @@ class Simulation:
         self.last_arrival_time = 0
         self.no_of_customer = 0
         self.events = EventHeap()
-        """
+
         self.system = System(
             queue_capacity,
             no_of_servers,
@@ -94,7 +88,7 @@ class Simulation:
             discipline,
             t_star,
             k_star
-        )"""
+        )
 
     @property
     def time_update_unit(self):
@@ -155,8 +149,6 @@ class Simulation:
     def add_new_arrival(self):
         new_arrival_time = round(self.last_arrival_time+distribution(self.arrival_distribution), self.precision)
         self.events.add("Arrival", new_arrival_time)
-        logging.debug(f"in add_new_arrival: {self.time}")
-        logging.debug(f"new time: {new_arrival_time}")
         self.last_arrival_time = new_arrival_time
 
     def next_time(self):
@@ -174,8 +166,6 @@ class Simulation:
         return bool(np.random.choice(2, p=[1-self.priority_probability, self.priority_probability]))
 
     def create_customer(self, time):
-        logging.debug(f"enter create customer: {self.time}")
-        logging.debug(f"starting no of customers: {self.no_of_customer}")
         no_customer_in_arrival = 1
         if self.is_arrival_batch():
             no_customer_in_arrival = round(distribution(self.arrival_batch_distribution, condition=1), self.precision)
@@ -184,59 +174,32 @@ class Simulation:
         for _ in range(no_customer_in_arrival):
             self.no_of_customer += 1
             customer.append(Customer(self.no_of_customer, time, priority))
-        logging.debug(f"ending no of customers: {self.no_of_customer}")
         return customer
 
     def event_manager(self, event):
-        logging.debug(f"enter event manager: {self.time}")
         if event.type == "Arrival":
-            logging.debug(f"enter arrival: {self.time}")
-            customer = self.create_customer(event.time)
-            logging.debug(f"customer created: {customer}")
-            #self.system.arrival(self.create_customer(event.time))
+            self.system.arrival(self.create_customer(event.time))
             self.add_new_arrival()
-            logging.debug(f"added new arrival: {self.events}")
-            #self.system.update_measures()
-            logging.debug(f"update for: {self.time}")
+            self.system.update_measures()
         elif event.type == "Service End":
-            pass
-            #self.system.service_end(event.time)
+            self.system.service_end(event.time)
 
     def regular_manager(self, turn_over_time):
-        logging.debug(f"enter regular manager: {self.time}")
         while self.time < turn_over_time:
-            logging.debug(f"beginning of regular while: {self.time}")
             self.time = self.next_time()
-            logging.debug(f"time changed: {self.time}")
-            #self.system.update_measures()
-            logging.debug(f"update for: {self.time}")
+            self.system.update_measures()
 
     def run(self):
-        logging.debug(f"simulation begin: {self.time}")
-        # self.initiate_events()
-        self.events.build_heap([0.15, 0.15, 0.3, 0.3, 0.3, 0.55])
-        self.last_arrival_time = 0.55
-        logging.debug(f"initial events: {self.events}")
+        self.initiate_events()
         while self.time < self.duration:
-            logging.debug(f"beginning of while: {self.time}")
             event = self.get_next_event()
-            logging.debug(f"get next event: {event}")
             if self.floored_time(event.time) == self.time:
-                logging.debug(f"enter event.time == self.time: {self.time}")
                 self.event_manager(event)
-                logging.debug(f"exit event manager: {self.time}")
             elif event.time > self.duration:
-                logging.debug(f"enter event.time > self.duration: {self.time}")
                 self.regular_manager(self.duration)
-                logging.debug(f"exit regular manager: {self.time}")
             else:
-                logging.debug(f"enter else: {self.time}")
                 self.regular_manager(self.floored_time(event.time))
-                logging.debug(f"exit regular manager: {self.time}")
                 self.event_manager(event)
-                logging.debug(f"exit event manager: {self.time}")
-            logging.debug(f"end of while: {self.time}")
-        logging.debug(f"end of simulation: {self.time}")
 
 
 if __name__ == "__main__":
