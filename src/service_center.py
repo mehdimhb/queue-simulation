@@ -28,3 +28,8 @@ class Server:
 
     def __repr__(self):
         return str(self.id)
+
+
+class ServiceCenter:
+    def __init__(self):
+        pass

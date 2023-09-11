@@ -1,10 +1,6 @@
 import numpy as np
-from scipy.stats import norm  # , poisson
-import re
-import time
-from service_center import Server
-from src.simulation import Customer
-from event import EventHeap
+#from service_center import Server
+#from src.simulation import Customer
 
 
 class Queue:
@@ -115,71 +111,6 @@ class Queue:
         # storage information
         self.queue = []
         self.servers = [Server(i) for i in range(self.no_of_servers)]
-        self.events, self.last_scheduled_arrival = self.initiate_events()
-
-    def initiate_events(self, n=25):
-        arrival_times = np.cumsum([self.distribution(self.arrival_distribution) for _ in range(n)])
-        arrival_times_rounded = list(map(lambda t: round(t, 2), arrival_times))
-        return EventHeap(arrival_times_rounded), arrival_times_rounded[-1]
-
-    def get_next_event(self):
-        return self.events.pop()
-
-    def add_new_arrival(self):
-        new_arrival_time = round(self.last_scheduled_arrival+self.distribution(self.arrival_distribution), 2)
-        self.events.add("Arrival", new_arrival_time)
-        self.last_scheduled_arrival = new_arrival_time
-
-    def distribution(self, dist, condition=0):
-        if bool(re.fullmatch(r"constant\(-?\d+(\.\d+)?\)", dist)):
-            c = float(re.search(r"-?\d+\.?\d*", dist).group())
-            if condition:
-                if c >= condition:
-                    return round(c, 2)
-                raise "Error"
-            return round(c, 2)
-        elif bool(re.fullmatch(r"disc-uniform\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
-            a, b = map(float, re.findall(r"-?\d+\.?\d*", dist))
-            assert a < b
-            if condition:
-                if condition <= a:
-                    return round(np.random.randint(a, b+1), 2)
-                elif condition <= b:
-                    return round(np.random.randint(condition, b+1), 2)
-                raise "Error"
-            return round(np.random.randint(a, b+1), 2)
-        elif bool(re.fullmatch(r"cont-uniform\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
-            a, b = map(float, re.findall(r"-?\d+\.?\d*", dist))
-            assert a < b
-            if condition:
-                if condition <= a:
-                    return round(np.random.random()*(b-a)+a, 2)
-                elif condition <= b:
-                    return round(np.random.random()*(b-condition)+condition, 2)
-                raise "Error"
-            return round(np.random.random()*(b-a)+a, 2)
-        elif bool(re.fullmatch(r"normal\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
-            m, s = map(float, re.findall(r"-?\d+\.?\d*", dist))
-            assert s > 0
-            if condition:
-                c = norm.sf(condition-0.005, loc=m, scale=s)
-                p = 1
-                n = condition
-                probabilities = []
-                while p/c > 0:
-                    p = norm.cdf(n+0.005, loc=m, scale=s) - norm.cdf(n-0.005, loc=m, scale=s)
-                    probabilities.append(p/c)
-                    n = round(n+0.01, 2)
-                return np.random.choice(np.arange(condition, n, 0.01), p=probabilities)
-            return round(np.random.normal(m, s), 2)
-        elif bool(re.fullmatch(r"poisson\(-?\d+(\.\d+)?\)", dist)):
-            p = float(re.search(r"-?\d+\.?\d*", dist).group())
-            assert p > 0
-            return round(np.random.poisson(p), 2)
-        elif bool(re.fullmatch(r"exponential\(-?\d+(\.\d+)?\)", dist)):
-            l = float(re.search(r"-?\d+\.?\d*", dist).group())
-            assert l > 0
-            return round(np.random.exponential(l), 2)
 
     def __str__(self):
         qq = [str(x) for x in self.queue]
@@ -364,24 +295,6 @@ class Queue:
                                                                                                            self.total_no_of_customers_go_directly_to_server), 2)
         except:
             self.average_time_spent_in_queue_per_customer = 0
-
-    def next_unit_time(self):
-        t = np.floor(self.time)
-        for i in range(round(1/self.TIME_UPDATE_UNIT)+1):
-            if round(t+i*self.TIME_UPDATE_UNIT, 2) > self.time:
-                return round(t+i*self.TIME_UPDATE_UNIT, 2)
-
-    def next_time(self):
-        if self.is_paused:
-            return self.time
-        t = self.next_unit_time()
-        if self.events[0] <= t:
-            self.time = self.events.pop(0)
-        else:
-            self.time = t
-
-    def time_sleep(self):
-        time.sleep((min(self.events[0], self.time+self.TIME_UPDATE_UNIT) - self.time)*10**(-self.speed))
 
     def is_arrival_batch(self):
         return bool(np.random.choice(2, p=[1-self.arrival_batch_probability, self.arrival_batch_probability]))
