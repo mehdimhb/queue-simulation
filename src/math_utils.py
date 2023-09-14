@@ -54,3 +54,15 @@ def distribution(dist, condition=0):
         lambd = float(re.search(r"-?\d+\.?\d*", dist).group())
         assert lambd > 0
         return round(np.random.exponential(lambd), 2)
+
+
+def logistic(x: float, start: float, stop: float, half: float) -> float:
+    return 1 if x <= start else 2/(1+np.e**(np.log(3)*(min(stop, x)-start)/(half-start)))
+
+
+def update_function(old_stat: float, old_c: float, new_stat: float, new_c: float, denominator: float) -> float:
+    return (old_stat*old_c+new_stat*new_c)/denominator
+
+
+def is_boolean_function(occurring_probability: float) -> float:
+    return bool(np.random.choice(2, p=[1-occurring_probability, occurring_probability]))

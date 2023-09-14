@@ -2,24 +2,25 @@ import numpy as np
 from time import sleep
 from numbers import Number
 from system import System
-from event import EventHeap
-from distributions import distribution
+from event import EventHeap, Arrival
+from math_utils import distribution
 
 
 class Customer:
-    def __init__(self, id, arrival_time, priority):
+    def __init__(self, id: int, arrival_time: float, priority: bool) -> None:
         self.id = id
         self.arrival_time = arrival_time
         self.priority = priority
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"[ID:{self.id} - Arrival:{self.arrival_time} - Priority:{self.priority}]"
 
 
 class Simulation:
     def __init__(
         self,
-        queue_capacity=np.inf,
+        event_heap: EventHeap,
+        queue_capacity=100,
         no_of_servers=2,
         arrival_distribution='cont-uniform(0.1, 0.6)',
         arrival_batch_probability=0.5,
@@ -45,9 +46,10 @@ class Simulation:
         discipline='FIFO',
         t_star=10,
         k_star=10,
-        speed=1,
-        duration=3
+        speed=2,
+        duration=20
     ):
+        self.events = event_heap
         self.arrival_distribution = arrival_distribution
         self.arrival_batch_probability = arrival_batch_probability
         self.arrival_batch_distribution = arrival_batch_distribution
@@ -60,15 +62,17 @@ class Simulation:
         self._is_paused = False
         self._initial_no_of_arrivals = 3
 
+        self.no_of_customers = 0
+        self.arrival_rate = 0
+
         self.time = 0
         self.last_arrival_time = 0
-        self.no_of_customer = 0
-        self.events = EventHeap()
-
         self.system = System(
+            event_heap,
             queue_capacity,
             no_of_servers,
             service_distribution,
+            priority_service_distribution,
             service_batch_probability,
             service_batch_distribution,
             service_dependency,
@@ -76,7 +80,6 @@ class Simulation:
             service_dependency_stop,
             service_dependency_half,
             server_select_rand_probability,
-            priority_service_distribution,
             bulk,
             bulk_start,
             bulk_stop,
@@ -87,7 +90,9 @@ class Simulation:
             renege_half,
             discipline,
             t_star,
-            k_star
+            k_star,
+            self.precision,
+            self.time_update_unit
         )
 
     @property
@@ -131,9 +136,9 @@ class Simulation:
     @initial_no_of_arrivals.setter
     def initial_no_of_arrivals(self, value):
         if not isinstance(value, int):
-            raise ValueError("Initial number of customers must be an integer")
+            raise ValueError("Initial number of arrivals must be an integer")
         if value < 0:
-            raise ValueError("Initial number of customers cannot be negative")
+            raise ValueError("Initial number of arrivals cannot be negative")
         self._initial_no_of_arrivals = value
 
     def initiate_events(self):
@@ -148,7 +153,7 @@ class Simulation:
 
     def add_new_arrival(self):
         new_arrival_time = round(self.last_arrival_time+distribution(self.arrival_distribution), self.precision)
-        self.events.add("Arrival", new_arrival_time)
+        self.events.add(Arrival(new_arrival_time))
         self.last_arrival_time = new_arrival_time
 
     def next_time(self):
@@ -165,29 +170,31 @@ class Simulation:
     def is_priority(self):
         return bool(np.random.choice(2, p=[1-self.priority_probability, self.priority_probability]))
 
-    def create_customer(self, time):
-        no_customer_in_arrival = 1
-        if self.is_arrival_batch():
-            no_customer_in_arrival = round(distribution(self.arrival_batch_distribution, condition=1), self.precision)
+    def create_customer(self, time: float) -> list[Customer]:
+        no_customer_in_arrival = round(distribution(self.arrival_batch_distribution, condition=1), self.precision) \
+            if self.is_arrival_batch() else 1
         priority = self.is_priority()
         customer = []
         for _ in range(no_customer_in_arrival):
-            self.no_of_customer += 1
-            customer.append(Customer(self.no_of_customer, time, priority))
+            self.no_of_customers += 1
+            customer.append(Customer(self.no_of_customers, time, priority))
         return customer
+
+    def update_measures(self) -> None:
+        self.arrival_rate = self.no_of_customers/self.time
+        self.system.update_measures(self.time)
 
     def event_manager(self, event):
         if event.type == "Arrival":
             self.system.arrival(self.create_customer(event.time))
             self.add_new_arrival()
-            self.system.update_measures()
         elif event.type == "Service End":
-            self.system.service_end(event.time)
+            self.system.service_end(event)
 
     def regular_manager(self, turn_over_time):
         while self.time < turn_over_time:
             self.time = self.next_time()
-            self.system.update_measures()
+            self.update_measures()
 
     def run(self):
         self.initiate_events()
@@ -203,5 +210,6 @@ class Simulation:
 
 
 if __name__ == "__main__":
-    s = Simulation()
+    event_heap = EventHeap()
+    s = Simulation(event_heap)
     s.run()
