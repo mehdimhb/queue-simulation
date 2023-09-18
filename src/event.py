@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from service_center import Service
+    from src.service_center import Service
 
 
 class Event:

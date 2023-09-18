@@ -1,59 +1,48 @@
 import numpy as np
-from scipy.stats import norm  # , poisson
+import scipy.stats as sc
 import re
 
 
-def distribution(dist, condition=0):
-    np.random.seed(3)
-    if bool(re.fullmatch(r"constant\(-?\d+(\.\d+)?\)", dist)):
-        c = float(re.search(r"-?\d+\.?\d*", dist).group())
-        if condition:
-            if c >= condition:
-                return round(c, 2)
-            raise "Error"
-        return round(c, 2)
-    elif bool(re.fullmatch(r"disc-uniform\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
-        a, b = map(float, re.findall(r"-?\d+\.?\d*", dist))
-        assert a < b
-        if condition:
-            if condition <= a:
-                return round(np.random.randint(a, b+1), 2)
-            elif condition <= b:
-                return round(np.random.randint(condition, b+1), 2)
-            raise "Error"
-        return round(np.random.randint(a, b+1), 2)
-    elif bool(re.fullmatch(r"cont-uniform\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
-        a, b = map(float, re.findall(r"-?\d+\.?\d*", dist))
-        assert a < b
-        if condition:
-            if condition <= a:
-                return round(np.random.random()*(b-a)+a, 2)
-            elif condition <= b:
-                return round(np.random.random()*(b-condition)+condition, 2)
-            raise "Error"
-        return round(np.random.random()*(b-a)+a, 2)
-    elif bool(re.fullmatch(r"normal\(-?\d+(\.\d+)?, *-?\d+(\.\d+)?\)", dist)):
+def distribution(dist: str, precision: int, integer: bool = False) -> float:
+    if bool(re.fullmatch(r"Constant\(\d+(\.\d+)?\)", dist)):
+        return round(float(re.search(r"\d+\.?\d*", dist).group()), precision)
+    elif bool(re.fullmatch(r"Discrete Uniform\(\d+(\.\d+)?, \d+(\.\d+)?\)", dist)):
+        a, b = map(int, re.findall(r"\d+\.?\d*", dist))
+        return round(np.random.randint(a, b+1), precision)
+    elif bool(re.fullmatch(r"Continuous Uniform\(\d+(\.\d+)?, \d+(\.\d+)?\)", dist)):
+        a, b = map(float, re.findall(r"\d+\.?\d*", dist))
+        return round(np.random.random()*(b-a)+a, precision)
+    elif bool(re.fullmatch(r"Normal\(-?\d+(\.\d+)?, \d+(\.\d+)?\)", dist)):
         m, s = map(float, re.findall(r"-?\d+\.?\d*", dist))
-        assert s > 0
-        if condition:
-            c = norm.sf(condition-0.005, loc=m, scale=s)
-            p = 1
-            n = condition
-            probabilities = []
-            while p/c > 0:
-                p = norm.cdf(n+0.005, loc=m, scale=s) - norm.cdf(n-0.005, loc=m, scale=s)
-                probabilities.append(p/c)
-                n = round(n+0.01, 2)
-            return np.random.choice(np.arange(condition, n, 0.01), p=probabilities)
-        return round(np.random.normal(m, s), 2)
-    elif bool(re.fullmatch(r"poisson\(-?\d+(\.\d+)?\)", dist)):
-        p = float(re.search(r"-?\d+\.?\d*", dist).group())
-        assert p > 0
-        return round(np.random.poisson(p), 2)
-    elif bool(re.fullmatch(r"exponential\(-?\d+(\.\d+)?\)", dist)):
-        lambd = float(re.search(r"-?\d+\.?\d*", dist).group())
-        assert lambd > 0
-        return round(np.random.exponential(lambd), 2)
+        n, h = (1, 0.5) if integer else (10**(-precision), 5*10**(-precision-1))
+        Px = 1
+        denominator = sc.norm.sf(n-h, loc=m, scale=s)
+        probabilities = []
+        while Px/denominator > 0:
+            Px = sc.norm.cdf(n+h, loc=m, scale=s) - sc.norm.cdf(n-h, loc=m, scale=s)
+            probabilities.append(Px/denominator)
+            n = round(n+2*h, precision)
+        return round(
+            np.random.choice(np.arange(1 if integer else 10**(-precision), n, round(2*h, precision)), p=probabilities),
+            precision
+        )
+    elif bool(re.fullmatch(r"Poisson\(\d+(\.\d+)?\)", dist)):
+        p = float(re.search(r"\d+\.?\d*", dist).group())
+        n = 1
+        Px = 1
+        denominator = sc.poisson.sf(0, p)
+        probabilities = []
+        while Px/denominator > 0:
+            Px = sc.poisson.pmf(n, p)
+            probabilities.append(Px/denominator)
+            n += 1
+        return round(np.random.choice(np.arange(1, n, 1), p=probabilities), precision)
+    elif bool(re.fullmatch(r"Exponential\(\d+(\.\d+)?\)", dist)):
+        return round(np.random.exponential(float(re.search(r"\d+\.?\d*", dist).group())), precision)
+
+
+def make_str(distribution: str, param1: float, param2: float) -> str:
+    return f"{distribution}({param1})" if param2 is None else f"{distribution}({param1}, {param2})"
 
 
 def logistic(x: float, start: float, stop: float, half: float) -> float:
