@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
-from src.math_utils import update_function, is_boolean_function, logistic
+from . import PRECISION
+from src.math_utils import update_function, boolean_function, logistic
 from typing import Iterator, TYPE_CHECKING
 if TYPE_CHECKING:
     from src.simulation import Customer
@@ -9,58 +10,54 @@ if TYPE_CHECKING:
 class Queue:
     def __init__(
         self,
-        queue_capacity,
-        server_select_rand_probability,
-        renege,
-        renege_start,
-        renege_stop,
-        renege_half,
-        t_star,
-        k_star,
-        discipline,
-        precision,
-        time_update_unit
-    ):
+        queue_capacity: int,
+        server_select_rand_probability: float,
+        renege: bool,
+        renege_start: int,
+        renege_half: int,
+        renege_stop: int,
+        t_star: int,
+        k_star: int,
+        discipline: str
+    ) -> None:
         self.queue_capacity = queue_capacity
         self.server_select_rand_probability = server_select_rand_probability
         self.renege = renege
         self.renege_start = renege_start
-        self.renege_stop = renege_stop
         self.renege_half = renege_half
+        self.renege_stop = renege_stop
         self.t_star = t_star
         self.k_star = k_star
         self.discipline = discipline
-        self.precision = precision
-        self.time_update_unit = time_update_unit
 
-        self.no_of_exited_customers = 0
-        self.average_no_of_customers = 0
-        self.average_time_spent_per_customer = 0
-        self.no_of_customers_delayed_longer_t_star = 0
-        self.total_time_queue_contains_more_k_star_customers = 0
-        self.no_of_reneging = 0
+        self.no_of_exited_customers: int = 0
+        self.average_no_of_customers: float = 0
+        self.average_time_spent_per_customer: float = 0
+        self.no_of_customers_delayed_longer_t_star: int = 0
+        self.total_time_queue_contains_more_k_star_customers: float = 0
+        self.no_of_reneging: int = 0
 
-        self.last_data = {'time': 0, 'number': 0}
+        self.last_data: dict[str, int | float] = {'time': 0, 'number': 0}
         self.regular_queue: list[Customer] = []
         self.priority_queue: list[Customer] = []
 
     @property
-    def proportion_of_customers_delayed_longer_t_star(self):
+    def proportion_of_customers_delayed_longer_t_star(self) -> float:
         if self.no_of_exited_customers == 0:
             return 0
-        return self.no_of_customers_delayed_longer_t_star/self.no_of_exited_customers
+        return round(self.no_of_customers_delayed_longer_t_star/self.no_of_exited_customers, PRECISION)
 
     @property
-    def proportion_of_time_queue_contains_more_k_star_customers(self):
+    def proportion_of_time_queue_contains_more_k_star_customers(self) -> float:
         if self.last_data['time'] == 0:
             return 0
-        return self.total_time_queue_contains_more_k_star_customers/self.last_data['time']
+        return round(self.total_time_queue_contains_more_k_star_customers/self.last_data['time'], PRECISION)
 
     @property
-    def proportion_of_reneging(self):
+    def proportion_of_reneging(self) -> float:
         if self.no_of_exited_customers == 0:
             return 0
-        return self.no_of_reneging/self.no_of_exited_customers
+        return round(self.no_of_reneging/self.no_of_exited_customers, PRECISION)
 
     def __len__(self) -> int:
         return len(self.regular_queue)+len(self.priority_queue)
@@ -80,11 +77,11 @@ class Queue:
         return len(self) == 0
 
     def is_next_service_random(self) -> bool:
-        return is_boolean_function(self.server_select_rand_probability)
+        return boolean_function(self.server_select_rand_probability)
 
     def is_renege(self, delaying_time: float) -> bool:
-        probability = logistic(delaying_time, self.renege_start, self.renege_stop, self.renege_half)
-        return is_boolean_function(probability)
+        probability = 1-logistic(delaying_time, self.renege_start, self.renege_half, self.renege_stop)
+        return boolean_function(probability)
 
     def join(self, customers: list[Customer]) -> None:
         for customer in customers:
@@ -111,7 +108,7 @@ class Queue:
             else:
                 yield self.regular_queue.pop(0)
 
-    def update_measures(self, **kwargs):
+    def update_measures(self, **kwargs) -> None:
         match kwargs['situation']:
             case 'Regular':
                 time = kwargs['time']
@@ -122,8 +119,11 @@ class Queue:
                     time-self.last_data['time'],
                     time
                 )
-                self.total_time_queue_contains_more_k_star_customers += \
-                    time-self.last_data['time'] if self.k_star <= self.last_data['number'] else 0
+                self.total_time_queue_contains_more_k_star_customers = round(
+                    self.total_time_queue_contains_more_k_star_customers +
+                    time-self.last_data['time'] if self.k_star <= self.last_data['number'] else 0,
+                    PRECISION
+                )
                 if self.renege:
                     self.reneging(time)
                 self.last_data['time'] = time

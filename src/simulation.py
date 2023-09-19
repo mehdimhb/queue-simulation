@@ -2,7 +2,7 @@ import numpy as np
 from time import sleep
 from src.system import System
 from src.event import EventHeap, Arrival, Event
-from src.math_utils import distribution, is_boolean_function
+from src.math_utils import distribution, boolean_function
 import logging
 
 
@@ -31,7 +31,7 @@ class Customer:
 
 class Simulation:
     TIME_UPDATE_UNIT = 0.1
-    PRECISION = 4
+    TIME_PRECISION = 2
     INITIAL_NO_OF_ARRIVALS = 3
 
     def __init__(
@@ -52,19 +52,19 @@ class Simulation:
         service_batch_distribution: str = None,
         service_dependency: bool = False,
         service_dependency_start: int = None,
-        service_dependency_stop: int = None,
         service_dependency_half: int = None,
+        service_dependency_stop: int = None,
         server_select_rand_probability: float = 0,
         priority_probability: float = 0,
         priority_service_distribution: str = None,
         bulk: bool = False,
         bulk_start: int = None,
-        bulk_stop: int = None,
         bulk_half: int = None,
+        bulk_stop: int = None,
         renege=False,
         renege_start: int = None,
-        renege_stop: int = None,
-        renege_half: int = None
+        renege_half: int = None,
+        renege_stop: int = None
     ):
         self.events = event_heap
         self.arrival_distribution = arrival_distribution
@@ -86,22 +86,21 @@ class Simulation:
             service_batch_distribution,
             service_dependency,
             service_dependency_start,
-            service_dependency_stop,
             service_dependency_half,
+            service_dependency_stop,
             server_select_rand_probability,
             bulk,
             bulk_start,
-            bulk_stop,
             bulk_half,
+            bulk_stop,
             renege,
             renege_start,
-            renege_stop,
             renege_half,
+            renege_stop,
             discipline,
             t_star,
             k_star,
-            self.PRECISION,
-            self.TIME_UPDATE_UNIT
+            self.TIME_PRECISION
         )
 
     def measures(self) -> None:
@@ -140,9 +139,9 @@ class Simulation:
 
     def initiate_events(self):
         arrival_times = np.cumsum(
-            [distribution(self.arrival_distribution, self.PRECISION) for _ in range(self.INITIAL_NO_OF_ARRIVALS)]
+            [distribution(self.arrival_distribution, self.TIME_PRECISION) for _ in range(self.INITIAL_NO_OF_ARRIVALS)]
         )
-        arrival_times_rounded = list(map(lambda t: round(t, self.PRECISION), arrival_times))
+        arrival_times_rounded = list(map(lambda t: round(t, self.TIME_PRECISION), arrival_times))
         self.events.build_heap(arrival_times_rounded)
         self.last_arrival_time = arrival_times_rounded[-1]
 
@@ -154,7 +153,7 @@ class Simulation:
 
     def add_new_arrival(self):
         new_arrival_time = round(
-            self.last_arrival_time+distribution(self.arrival_distribution, self.PRECISION), self.PRECISION
+            self.last_arrival_time+distribution(self.arrival_distribution, self.TIME_PRECISION), self.TIME_PRECISION
         )
         self.events.add(Arrival(new_arrival_time))
         self.last_arrival_time = new_arrival_time
@@ -162,20 +161,22 @@ class Simulation:
     def next_time(self):
         if self.speed is not None:
             sleep(self.TIME_UPDATE_UNIT*10**(-self.speed))
-        return round(self.time+self.TIME_UPDATE_UNIT, self.PRECISION)
+        return round(self.time+self.TIME_UPDATE_UNIT, self.TIME_PRECISION)
 
     def floored_time(self, time):
-        return round(np.floor(round(time/self.TIME_UPDATE_UNIT, self.PRECISION))*self.TIME_UPDATE_UNIT, self.PRECISION)
+        return round(
+            np.floor(round(time/self.TIME_UPDATE_UNIT, self.TIME_PRECISION))*self.TIME_UPDATE_UNIT, self.TIME_PRECISION
+        )
 
     def is_arrival_batch(self):
-        return is_boolean_function(self.arrival_batch_probability)
+        return boolean_function(self.arrival_batch_probability)
 
     def is_priority(self):
-        return is_boolean_function(self.priority_probability)
+        return boolean_function(self.priority_probability)
 
     def create_customer(self, time: float) -> list[Customer]:
         no_customer_in_arrival = round(
-            distribution(self.arrival_batch_distribution, self.PRECISION, integer=True), self.PRECISION
+            distribution(self.arrival_batch_distribution, self.TIME_PRECISION, is_integer=True), self.TIME_PRECISION
         ) if self.is_arrival_batch() else 1
         priority = self.is_priority()
         customer = []
@@ -223,31 +224,12 @@ if __name__ == '__main__':
         2000,
         3,
         "Exponential(2)",
-        "Exponential(5)",
+        "Exponential(6)",
         "FIFO",
         5,
         5,
         None,
         1000,
-        0.5,
-        'Discrete Uniform(1, 3)',
-        0.4,
-        'Discrete Uniform(1, 3)',
-        False,
-        None,
-        None,
-        None,
-        0.5,
-        0,
-        None,
-        True,
-        80,
-        100,
-        110,
-        True,
-        5,
-        100,
-        110
     )
     s.run()
     s.measures()

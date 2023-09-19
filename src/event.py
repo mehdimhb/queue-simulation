@@ -29,8 +29,8 @@ class ServiceEnd(Event):
 
 class EventHeap:
     def __init__(self) -> None:
-        self.idx_of_events = {}
-        self.heap = []
+        self.idx_of_events: dict[Event, int] = {}
+        self.heap: list[Event] = []
 
     def __repr__(self) -> str:
         extra = ""
@@ -59,8 +59,6 @@ class EventHeap:
         self.heap = heap
 
     def pop(self) -> Event:
-        if self.is_empty():
-            return None
         self.heap[0], self.heap[-1] = self.heap[-1], self.heap[0]
         self.idx_of_events[self.heap[0]], self.idx_of_events[self.heap[-1]] = (
             self.idx_of_events[self.heap[-1]],
@@ -72,8 +70,6 @@ class EventHeap:
         return x
 
     def peek(self) -> Event:
-        if self.is_empty():
-            return None
         return self.heap[0]
 
     def is_empty(self) -> bool:

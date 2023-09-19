@@ -1,65 +1,63 @@
 from __future__ import annotations
+from . import PRECISION
 from src.service_center import ServiceCenter
 from src.queue_management import Queue
-from src.math_utils import update_function, logistic, is_boolean_function
+from src.math_utils import update_function, logistic, boolean_function
 from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from src.simulation import Customer
-    from src.service_center import Service
-    from src.event import ServiceEnd
-import logging
+    from src.event import ServiceEnd, EventHeap
 
 
 class System:
     def __init__(
         self,
-        event_heap,
-        queue_capacity,
-        no_of_servers,
-        service_distribution,
-        priority_service_distribution,
-        service_batch_probability,
-        service_batch_distribution,
-        service_dependency,
-        service_dependency_start,
-        service_dependency_stop,
-        service_dependency_half,
-        server_select_rand_probability,
-        bulk,
-        bulk_start,
-        bulk_stop,
-        bulk_half,
-        renege,
-        renege_start,
-        renege_stop,
-        renege_half,
-        discipline,
-        t_star,
-        k_star,
-        precision,
-        time_update_unit
-    ):
+        event_heap: EventHeap,
+        queue_capacity: int,
+        no_of_servers: int,
+        service_distribution: str,
+        priority_service_distribution: str,
+        service_batch_probability: float,
+        service_batch_distribution: str,
+        service_dependency: bool,
+        service_dependency_start: int,
+        service_dependency_half: int,
+        service_dependency_stop: int,
+        server_select_rand_probability: float,
+        bulk: bool,
+        bulk_start: int,
+        bulk_half: int,
+        bulk_stop: int,
+        renege: bool,
+        renege_start: int,
+        renege_half: int,
+        renege_stop: int,
+        discipline: str,
+        t_star: int,
+        k_star: int,
+        time_precision: int,
+    ) -> None:
         self.bulk = bulk
         self.bulk_start = bulk_start
-        self.bulk_stop = bulk_stop
         self.bulk_half = bulk_half
+        self.bulk_stop = bulk_stop
 
-        self.no_of_finished_customers = 0
-        self.all_time_no_of_customers = 0
-        self.all_time_no_of_customers_system = 0
-        self.all_time_no_of_customers_service_center = 0
-        self.all_time_no_of_customers_queue = 0
-        self.no_of_unfinished_customers = 0
+        self.no_of_finished_customers: int = 0
+        self.all_time_no_of_customers: int = 0
+        self.all_time_no_of_customers_system: int = 0
+        self.all_time_no_of_customers_service_center: int = 0
+        self.all_time_no_of_customers_queue: int = 0
+        self.no_of_unfinished_customers: int = 0
 
-        self.average_no_of_customers_system = 0
-        self.average_time_spent_per_customer = 0
+        self.average_no_of_customers_system: float = 0
+        self.average_time_spent_per_customer: float = 0
 
-        self.no_of_arrivals = 0
-        self.no_of_customers_skip_queue = 0
-        self.no_of_customers_turned_away = 0
-        self.no_of_bulking = 0
+        self.no_of_arrivals: int = 0
+        self.no_of_customers_skip_queue: int = 0
+        self.no_of_customers_turned_away: int = 0
+        self.no_of_bulking: int = 0
 
-        self.last_data = {'time': 0, 'number': 0}
+        self.last_data: dict[str, int | float] = {'time': 0, 'number': 0}
 
         self.service_center = ServiceCenter(
             event_heap,
@@ -70,54 +68,51 @@ class System:
             service_batch_distribution,
             service_dependency,
             service_dependency_start,
-            service_dependency_stop,
             service_dependency_half,
-            precision,
-            time_update_unit
+            service_dependency_stop,
+            time_precision
         )
         self.queue = Queue(
             queue_capacity,
             server_select_rand_probability,
             renege,
             renege_start,
-            renege_stop,
             renege_half,
+            renege_stop,
             t_star,
             k_star,
-            discipline,
-            precision,
-            time_update_unit
+            discipline
         )
 
     @property
-    def average_arrival_batch_size(self):
+    def average_arrival_batch_size(self) -> float:
         if self.no_of_arrivals == 0:
             return 0
-        return self.all_time_no_of_customers/self.no_of_arrivals
+        return round(self.all_time_no_of_customers/self.no_of_arrivals, PRECISION)
 
     @property
-    def arrival_rate(self):
+    def arrival_rate(self) -> float:
         if self.last_data['time'] == 0:
             return 0
-        return self.no_of_arrivals/self.last_data['time']
+        return round(self.no_of_arrivals/self.last_data['time'], PRECISION)
 
     @property
-    def proportion_of_customers_skip_queue(self):
+    def proportion_of_customers_skip_queue(self) -> float:
         if self.all_time_no_of_customers_system == 0:
             return 0
-        return self.no_of_customers_skip_queue/self.all_time_no_of_customers_system
+        return round(self.no_of_customers_skip_queue/self.all_time_no_of_customers_system, PRECISION)
 
     @property
-    def proportion_of_customers_turned_away(self):
+    def proportion_of_customers_turned_away(self) -> float:
         if self.all_time_no_of_customers == 0:
             return 0
-        return self.no_of_customers_turned_away/self.all_time_no_of_customers
+        return round(self.no_of_customers_turned_away/self.all_time_no_of_customers, PRECISION)
 
     @property
-    def proportion_of_bulking(self):
+    def proportion_of_bulking(self) -> float:
         if self.all_time_no_of_customers == 0:
             return 0
-        return self.no_of_bulking/self.all_time_no_of_customers
+        return round(self.no_of_bulking/self.all_time_no_of_customers, PRECISION)
 
     def __len__(self) -> int:
         return len(self.queue) + len(self.service_center)
@@ -125,9 +120,8 @@ class System:
     def is_bulk(self) -> bool:
         if not self.bulk:
             return False
-        probability = logistic(len(self.queue), self.bulk_start, self.bulk_stop, self.bulk_half)
-        logging.debug(f'probability = {probability} - length={len(self.queue)}')
-        return is_boolean_function(probability)
+        probability = 1-logistic(len(self.queue), self.bulk_start, self.bulk_half, self.bulk_stop)
+        return boolean_function(probability)
 
     def arrival(self, customer: list[Customer]) -> None:
         self.update_measures(situation='Arrival', customer_size=len(customer))
@@ -166,7 +160,7 @@ class System:
     def service_end(self, event: ServiceEnd) -> None:
         self.service_center.service_end(event.service)
         if not self.queue.is_empty():
-            customers = list(self.queue.pop(self.service_center.no_of_customers_in_next_service()))
+            customers = list(self.queue.pop(min(len(self.queue), self.service_center.no_of_customers_in_next_service())))
             for customer in customers:
                 self.queue.update_measures(situation='Pop', arrival_time=customer.arrival_time, exit_time=event.service.end)
             self.queue.update_measures(situation='Regular', time=event.service.end)

@@ -1,44 +1,48 @@
 from __future__ import annotations
 import numpy as np
-from src.math_utils import distribution, logistic, update_function, is_boolean_function
-from src.event import EventHeap, ServiceEnd
-from typing import TYPE_CHECKING
+from . import PRECISION
+from src.math_utils import distribution, logistic, update_function, boolean_function
+from src.event import ServiceEnd
+from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from src.simulation import Customer
+    from src.event import EventHeap
 
 
 class Server:
-    def __init__(self, server_id):
+    def __init__(self, server_id: int) -> None:
         self.id = server_id
-        self.status = "idle"
-        self.no_of_served_customers = 0
-        self.no_of_unserved_customers = 0
-        self.average_time_spent_per_customer = 0
-        self.no_of_services = 0
-        self.no_of_unfinished_services = 0
-        self.total_service_time = 0
-        self.system_time = 0
+        self.status: Literal['idle', 'busy'] = "idle"
+        self.no_of_served_customers: int = 0
+        self.no_of_unserved_customers: int = 0
+        self.average_time_spent_per_customer: float = 0
+        self.no_of_services: int = 0
+        self.no_of_unfinished_services: int = 0
+        self.total_service_time: float = 0
+        self.system_time: float = 0
 
     @property
-    def service_rate(self):
+    def service_rate(self) -> float:
         if self.total_service_time == 0:
             return 0
-        return self.no_of_served_customers/self.total_service_time
+        return round(self.no_of_served_customers/self.total_service_time, PRECISION)
 
     @property
-    def server_utilization(self):
+    def server_utilization(self) -> float:
         if self.system_time == 0:
             return 0
-        return self.total_service_time/self.system_time
+        return round(self.total_service_time/self.system_time, PRECISION)
 
     @property
-    def average_service_batch_size(self):
+    def average_service_batch_size(self) -> float:
         if (self.no_of_services+self.no_of_unfinished_services) == 0:
             return 0
-        return (self.no_of_served_customers+self.no_of_unserved_customers) /\
-            (self.no_of_services+self.no_of_unfinished_services)
+        return round(
+            (self.no_of_served_customers+self.no_of_unserved_customers)/(self.no_of_services+self.no_of_unfinished_services),
+            PRECISION
+        )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.id}:{self.status}"
 
 
@@ -49,14 +53,14 @@ class Service:
         self.server = server
         self.customer = customer
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"server:{self.server} - customer{self.customer} - {self.start}:{self.end}"
 
 
 class ServerList:
     def __init__(self, no_of_servers: int) -> None:
-        self.idle_servers = [Server(i) for i in range(no_of_servers)]
-        self.busy_servers = []
+        self.idle_servers: list[Server] = [Server(i) for i in range(no_of_servers)]
+        self.busy_servers: list[Server] = []
 
     def __repr__(self) -> str:
         return str(self.combine_servers())
@@ -86,18 +90,17 @@ class ServiceCenter:
     def __init__(
         self,
         event_heap: EventHeap,
-        no_of_servers,
-        service_distribution,
-        priority_service_distribution,
-        service_batch_probability,
-        service_batch_distribution,
-        service_dependency,
-        service_dependency_start,
-        service_dependency_stop,
-        service_dependency_half,
-        precision,
-        time_update_unit
-    ):
+        no_of_servers: int,
+        service_distribution: str,
+        priority_service_distribution: str,
+        service_batch_probability: float,
+        service_batch_distribution: str,
+        service_dependency: bool,
+        service_dependency_start: int,
+        service_dependency_half: int,
+        service_dependency_stop: int,
+        time_precision: int,
+    ) -> None:
         self.events = event_heap
         self.no_of_servers = no_of_servers
         self.service_distribution = service_distribution
@@ -106,15 +109,14 @@ class ServiceCenter:
         self.service_batch_distribution = service_batch_distribution
         self.service_dependency = service_dependency
         self.service_dependency_start = service_dependency_start
-        self.service_dependency_stop = service_dependency_stop
         self.service_dependency_half = service_dependency_half
-        self.precision = precision
-        self.time_update_unit = time_update_unit
+        self.service_dependency_stop = service_dependency_stop
+        self.time_precision = time_precision
 
-        self.no_of_customers = 0
-        self.average_no_of_customers = 0
+        self.no_of_customers: int = 0
+        self.average_no_of_customers: float = 0
 
-        self.last_data = {'time': 0, 'number': 0}
+        self.last_data: dict[str, int | float] = {'time': 0, 'number': 0}
         self.servers = ServerList(no_of_servers)
         self.unfinished_services: list[Service] = []
 
@@ -128,7 +130,7 @@ class ServiceCenter:
 
     @property
     def average_server_utilization(self):
-        return np.mean([server.server_utilization for server in self.servers.combine_servers()])
+        return round(np.mean([server.server_utilization for server in self.servers.combine_servers()]), PRECISION)
 
     @property
     def average_service_batch_size(self):
@@ -147,18 +149,18 @@ class ServiceCenter:
         return len(self.servers.busy_servers)
 
     def is_service_batch(self) -> bool:
-        return is_boolean_function(self.service_batch_probability)
+        return boolean_function(self.service_batch_probability)
 
     def is_service_dependent(self) -> bool:
-        return is_boolean_function(self.service_dependency)
+        return boolean_function(self.service_dependency)
 
     def service_dependency_coefficient(self, length_of_queue: int) -> float:
         return logistic(
-            length_of_queue, self.service_dependency_start, self.service_dependency_stop, self.service_dependency_half
+            length_of_queue, self.service_dependency_start, self.service_dependency_half, self.service_dependency_stop
         )
 
     def no_of_customers_in_next_service(self) -> int:
-        return round(distribution(self.service_batch_distribution, self.precision, integer=True), self.precision) \
+        return round(distribution(self.service_batch_distribution, self.time_precision, is_integer=True), PRECISION) \
             if self.is_service_batch() else 1
 
     def average_among_servers(self, stat: str, coef: str) -> float:
@@ -169,12 +171,12 @@ class ServiceCenter:
             denominator += eval(f'server.{coef}')
         if denominator == 0:
             return 0
-        return round(numerator/denominator, self.precision)
+        return round(numerator/denominator, PRECISION)
 
     def initiate_service(self, customer: list[Customer], start_time: float, length_of_queue: int) -> None:
         service_duration = distribution(
             self.priority_service_distribution if customer[0].priority else self.service_distribution,
-            self.precision
+            self.time_precision
         )
         service_duration *= self.service_dependency_coefficient(length_of_queue) if self.is_service_dependent() else 1
         service = Service(start_time, start_time+service_duration, self.servers.get_server(), customer)
@@ -218,7 +220,7 @@ class ServiceCenter:
                     server.no_of_served_customers+len(service.customer)
                 )
                 server.no_of_served_customers += len(service.customer)
-                server.total_service_time += service.end-service.start
+                server.total_service_time = round(server.total_service_time+service.end-service.start, PRECISION)
                 server.no_of_services += 1
             case 'Ending':
                 time = kwargs['time']
@@ -232,5 +234,5 @@ class ServiceCenter:
                         server.no_of_served_customers+server.no_of_unserved_customers+len(service.customer)
                     )
                     server.no_of_unserved_customers += len(service.customer)
-                    server.total_service_time += time-service.start
+                    server.total_service_time += round(server.total_service_time+time-service.start, PRECISION)
                     server.no_of_unfinished_services += 1
