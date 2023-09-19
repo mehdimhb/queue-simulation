@@ -1,4 +1,7 @@
 import streamlit as st
+from src.simulation import Simulation
+from src.event import EventHeap
+from src.math_utils import make_str
 
 # set title of the page
 st.set_page_config(
@@ -31,7 +34,6 @@ arrival_distribution = col1.selectbox(
     ["Constant", "Continuous Uniform", "Normal", "Exponential"],
     key=101
 )
-
 match arrival_distribution:
     case "Constant":
         arr_dis_param1 = col2.number_input("c", 0.01, step=0.01, key=1)
@@ -45,6 +47,7 @@ match arrival_distribution:
     case "Exponential":
         arr_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=6)
         arr_dis_param2 = None
+arrival_distribution = make_str(arrival_distribution, arr_dis_param1, arr_dis_param2)
 
 arrival_batch = st.checkbox("Arrival could be in batch")
 if arrival_batch:
@@ -72,6 +75,9 @@ if arrival_batch:
         case "Poisson":
             arr_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=12)
             arr_batch_dis_param2 = None
+    arrival_batch_distribution = make_str(arrival_batch_distribution, arr_batch_dis_param1, arr_batch_dis_param2)
+else:
+    arrival_batch_probability, arrival_batch_distribution = 0, None
 
 # service settings
 st.subheader("Service Settings")
@@ -83,7 +89,6 @@ service_distribution = col1.selectbox(
     ["Constant", "Continuous Uniform", "Normal", "Exponential"],
     key=103
 )
-
 match service_distribution:
     case "Constant":
         ser_dis_param1 = col2.number_input("c", 0.01, step=0.01, key=13)
@@ -97,6 +102,7 @@ match service_distribution:
     case "Exponential":
         ser_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=18)
         ser_dis_param2 = None
+service_distribution = make_str(service_distribution, ser_dis_param1, ser_dis_param2)
 
 service_batch = st.checkbox("Server could service to batch")
 if service_batch:
@@ -125,36 +131,49 @@ if service_batch:
         case "Poisson":
             ser_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=24)
             ser_batch_dis_param2 = None
+    service_batch_distribution = make_str(service_batch_distribution, ser_batch_dis_param1, ser_batch_dis_param2)
+else:
+    service_batch_probability, service_batch_distribution = 0, None
 
-select_randomly = st.checkbox("Server could select customers randomly instead \
+server_select_rand = st.checkbox("Server could select customers randomly instead \
     of always selecting the head of the queue")
-if select_randomly:
+if server_select_rand:
     col, _ = st.columns(2)
-    select_randomly_probability = col.number_input(
+    server_select_rand_probability = col.number_input(
         "Probability",
         0.00, 1.00,
         step=0.01,
         help="Probability of a server select customers randomly instead of \
             selecting the head of the queue"
     )
+else:
+    server_select_rand_probability = 0
 
-ser_dependency = st.checkbox("Service time should depend on the length \
+service_dependency = st.checkbox("Service time should depend on the length \
     of the queue")
-if ser_dependency:
+if service_dependency:
     col1, col2, col3 = st.columns(3)
-    ser_dep_start = col1.text_input(
+    service_dependency_start = col1.number_input(
         "Start",
+        1,
+        step=1,
         help="The length of the queue in which dependency starts to take place"
     )
-    ser_dep_stop = col2.text_input(
+    service_dependency_half = col2.number_input(
+        "Half",
+        1,
+        step=1,
+        help="The length of the queue in which service time would be half of the usual"
+    )
+    service_dependency_stop = col3.number_input(
         "Stop",
+        1,
+        step=1,
         help="The length of the queue in which further increasing will have \
             no effect on service time"
     )
-    ser_dep_half = col3.text_input(
-        "Half",
-        help="The length of the queue in which service time would be half of the usual"
-    )
+else:
+    service_dependency_start, service_dependency_half, service_dependency_stop = None, None, None
 
 priority_customer = st.checkbox("Some Customers would have priority in \
     receiving service")
@@ -165,12 +184,12 @@ if priority_customer:
         0.00, 1.00,
         step=0.01,
         help="Probability of a customer to have priority")
-    service_time_priority_distribution = col2.selectbox(
+    priority_service_distribution = col2.selectbox(
         "Service Time Dist. of Priority Customers",
         ["Constant", "Continuous Uniform", "Normal", "Poisson"],
         key=105
     )
-    match service_time_priority_distribution:
+    match priority_service_distribution:
         case "Constant":
             ser_tp_dis_param1 = col3.number_input("c", 0.01, step=0.01, key=25)
             ser_tp_dis_param2 = None
@@ -183,6 +202,9 @@ if priority_customer:
         case "Exponential":
             ser_tp_dis_param1 = col3.number_input("\u03BB", 0.01, step=0.01, key=30)
             ser_tp_dis_param2 = None
+    priority_service_distribution = make_str(priority_service_distribution, ser_tp_dis_param1, ser_tp_dis_param2)
+else:
+    priority_probability, priority_service_distribution = 0, None
 
 # queue behavior and stats settings
 st.subheader("Queue Behavior and Stats Settings")
@@ -191,39 +213,55 @@ bulk = st.checkbox("Bulk (Customers could decide not to join the queue when \
     the length of the queue is too long)")
 if bulk:
     col1, col2, col3 = st.columns(3)
-    bulk_start = col1.text_input(
+    bulk_start = col1.number_input(
         "Start",
+        1,
+        step=1,
         help="The length of the queue in which probability of bulking begin \
             to increase from 0.0"
     )
-    bulk_stop = col2.text_input(
+    bulk_half = col2.number_input(
+        "Half",
+        1,
+        step=1,
+        help="The length of the queue in which probability of bulking is 0.5"
+    )
+    bulk_stop = col3.number_input(
         "Stop",
+        1,
+        step=1,
         help="The length of the queue in which further increasing will have \
             no effect on probability of bulking"
     )
-    bulk_half = col3.text_input(
-        "Half",
-        help="The length of the queue in which probability of bulking is 0.5"
-    )
+else:
+    bulk_start, bulk_half, bulk_stop = None, None, None
 
 renege = st.checkbox("Renege (Customers could leave the queue if they've \
     been waiting for too long in the queue)")
 if renege:
     col1, col2, col3 = st.columns(3)
-    renege_start = col1.text_input(
+    renege_start = col1.number_input(
         "Start",
+        1,
+        step=1,
         help="The time spent in the queue in which probability of reneging \
             begin to increase from 0.0"
     )
-    renege_stop = col2.text_input(
+    renege_half = col2.number_input(
+        "Half",
+        1,
+        step=1,
+        help="The length of the queue in which probability of reneging is 0.5"
+    )
+    renege_stop = col3.number_input(
         "Stop",
+        1,
+        step=1,
         help="The time spent in the queue in which further increasing will\
             have no effect on probability of reneging"
     )
-    renege_half = col3.text_input(
-        "Half",
-        help="The length of the queue in which probability of reneging is 0.5"
-    )
+else:
+    renege_start, renege_half, renege_stop = None, None, None
 
 col1, col2, col3 = st.columns([2, 1, 1])
 discipline = col1.selectbox(
@@ -231,7 +269,7 @@ discipline = col1.selectbox(
         ["FIFO (First in first out)",
          "LIFO (Last in first out)",
          "SIRO (Service in random order)"]
-)
+)[:4]
 t_star = col2.number_input(
     "t*",
     1,
@@ -239,8 +277,8 @@ t_star = col2.number_input(
     help="Used in Statistics: proportion of customers delayed in the queue \
         more than t* time"
 )
-t_star = col3.number_input(
-    "t*",
+k_star = col3.number_input(
+    "k*",
     1,
     step=1,
     help="Used in Statistics: proportion of time in which the queue contained \
@@ -249,26 +287,38 @@ t_star = col3.number_input(
 # simulation
 st.header("Simulation")
 
-if 'simulation' not in st.session_state:
-    st.session_state.simulation = 0
-
-
-def set_state(state):
-    st.session_state.simulation = state
-
-
-if st.session_state.simulation == 0:
-    st.write("")
-    st.button(
-        "Start Simulation", type="primary", on_click=set_state, args=[1]
+st.write("")
+if st.button("Start Simulation", type="primary"):
+    event_heap = EventHeap()
+    simulation = Simulation(
+        event_heap,
+        queue_capacity,
+        no_of_servers,
+        arrival_distribution,
+        service_distribution,
+        discipline,
+        t_star,
+        k_star,
+        speed,
+        duration,
+        arrival_batch_probability,
+        arrival_batch_distribution,
+        service_batch_probability,
+        service_batch_distribution,
+        service_dependency,
+        service_dependency_start,
+        service_dependency_half,
+        service_dependency_stop,
+        server_select_rand_probability,
+        priority_probability,
+        priority_service_distribution,
+        bulk,
+        bulk_start,
+        bulk_half,
+        bulk_stop,
+        renege,
+        renege_start,
+        renege_half,
+        renege_stop
     )
-
-if st.session_state.simulation == 1:
-    st.write("")
-    col1, col2, col3 = st.columns([1, 1, 6])
-    col1.button(
-        "Pause", type="primary", on_click=set_state, args=[0]
-    )
-    col2.button(
-        "Reset", type="primary", on_click=set_state, args=[0]
-    )
+    simulation.run()
