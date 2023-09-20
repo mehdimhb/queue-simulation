@@ -351,7 +351,7 @@ if st.button("Start Simulation", type="primary"):
                     |Reneged Customers|{simulation.system.queue.no_of_reneging} ({round(100*simulation.system.queue.proportion_of_reneging, 2)}%)|
                     |Customers Skip Queue to Service Center|{simulation.system.no_of_customers_skip_queue} ({round(100*simulation.system.proportion_of_customers_skip_queue, 2)}%)|
                     |Customers Delayed Longer than {simulation.system.queue.t_star}s|{simulation.system.queue.no_of_customers_delayed_longer_t_star} ({round(100*simulation.system.queue.proportion_of_customers_delayed_longer_t_star, 2)}%)|
-                    |Percent of Time Queue Contained More than {simulation.system.queue.k_star}|{simulation.system.queue.total_time_queue_contains_more_k_star_customers} ({round(100*simulation.system.queue.proportion_of_time_queue_contains_more_k_star_customers, 2)}%)|
+                    |Percent of Time Queue Contained More than {simulation.system.queue.k_star} Customers|{simulation.system.queue.total_time_queue_contains_more_k_star_customers} ({round(100*simulation.system.queue.proportion_of_time_queue_contains_more_k_star_customers, 2)}%)|
                     |Arrivals|{simulation.system.no_of_arrivals}|
                     |Arrival Rate|{simulation.system.arrival_rate}|
                     |Service Rate|{simulation.system.service_center.service_rate}|
