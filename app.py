@@ -342,10 +342,10 @@ if st.button("Start Simulation", type="primary"):
                     |All Time Customers in Service Center|{simulation.system.all_time_no_of_customers_service_center}|
                     |Average Customers in Service Center|{simulation.system.service_center.average_no_of_customers}|
                     |Average Time Spent per Customers in Service Center|{simulation.system.service_center.average_time_spent_per_customer}|
-                    |Departed Customers|{simulation.system.no_of_finished_customers} ({round(100*simulation.system.no_of_finished_customers/simulation.system.all_time_no_of_customers, 2)}%)|
-                    |Still Waiting Customers|{simulation.system.no_of_unfinished_customers} ({round(100*simulation.system.no_of_unfinished_customers/simulation.system.all_time_no_of_customers, 2)}%)|
-                    |Still Waiting Customers in Queue|{len(simulation.system.queue)} ({round(100*len(simulation.system.queue)/simulation.system.no_of_unfinished_customers, 2)}%)|
-                    |Still Waiting Customers in Service Center|{len(simulation.system.service_center)} ({round(100*len(simulation.system.service_center)/simulation.system.no_of_unfinished_customers, 2)}%)|
+                    |Departed Customers|{simulation.system.no_of_finished_customers} ({round(100*simulation.system.no_of_finished_customers/simulation.system.all_time_no_of_customers, 2) if simulation.system.all_time_no_of_customers else 0.0}%)|
+                    |Still Waiting Customers|{simulation.system.no_of_unfinished_customers} ({round(100*simulation.system.no_of_unfinished_customers/simulation.system.all_time_no_of_customers, 2) if simulation.system.all_time_no_of_customers else 0.0}%)|
+                    |Still Waiting Customers in Queue|{len(simulation.system.queue)} ({round(100*len(simulation.system.queue)/simulation.system.no_of_unfinished_customers, 2) if simulation.system.no_of_unfinished_customers else 0.0}%)|
+                    |Still Waiting Customers in Service Center|{len(simulation.system.service_center)} ({round(100*len(simulation.system.service_center)/simulation.system.no_of_unfinished_customers, 2) if simulation.system.no_of_unfinished_customers else 0.0}%)|
                     |Turned Away Customers Due to Maximum Capacity|{simulation.system.no_of_customers_turned_away} ({round(100*simulation.system.proportion_of_customers_turned_away, 2)}%)|
                     |Bulked Customers|{simulation.system.no_of_bulking} ({round(100*simulation.system.proportion_of_bulking, 2)}%)|
                     |Reneged Customers|{simulation.system.queue.no_of_reneging} ({round(100*simulation.system.queue.proportion_of_reneging, 2)}%)|
