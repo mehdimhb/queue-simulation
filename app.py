@@ -3,6 +3,7 @@ from src.simulation import Simulation
 from src.event import EventHeap
 from src.math_utils import make_str
 
+
 # set title of the page
 st.set_page_config(
     page_title="Queue Simulation",
@@ -10,6 +11,7 @@ st.set_page_config(
 
 # title
 st.title("Queue Simulation")
+
 
 # settings
 st.header("Settings")
@@ -22,6 +24,8 @@ col1, col2, col3, col4 = st.columns(4)
 queue_capacity = col1.number_input("Queue Capacity", 0, step=1)
 no_of_servers = col2.number_input("Number of Servers", 0, step=1)
 speed = col3.slider("Simulation Speed", 0, 3, step=1)
+if speed == 3:
+    speed = None
 duration = col4.slider("Simulation Duration", 100, 5000, step=100)
 
 # arrival settings
@@ -43,7 +47,7 @@ match arrival_distribution:
         arr_dis_param2 = col3.number_input("b", arr_dis_param1+0.01, step=0.01, key=3)
     case "Normal":
         arr_dis_param1 = col2.number_input("mean", step=0.01, key=4)
-        arr_dis_param2 = col3.number_input("sd", step=0.01, key=5)
+        arr_dis_param2 = col3.number_input("sd", 0.01, step=0.01, key=5)
     case "Exponential":
         arr_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=6)
         arr_dis_param2 = None
@@ -71,7 +75,7 @@ if arrival_batch:
             arr_batch_dis_param2 = col4.number_input("b", arr_batch_dis_param1+1, step=1, key=9)
         case "Normal":
             arr_batch_dis_param1 = col3.number_input("mean", step=0.01, key=10)
-            arr_batch_dis_param2 = col4.number_input("sd", step=0.01, key=11)
+            arr_batch_dis_param2 = col4.number_input("sd", 0.01, step=0.01, key=11)
         case "Poisson":
             arr_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=12)
             arr_batch_dis_param2 = None
@@ -98,7 +102,7 @@ match service_distribution:
         ser_dis_param2 = col3.number_input("b", ser_dis_param1+0.01, step=0.01, key=15)
     case "Normal":
         ser_dis_param1 = col2.number_input("mean", step=0.01, key=16)
-        ser_dis_param2 = col3.number_input("sd", step=0.01, key=17)
+        ser_dis_param2 = col3.number_input("sd", 0.01, step=0.01, key=17)
     case "Exponential":
         ser_dis_param1 = col2.number_input("\u03BB", 0.01, step=0.01, key=18)
         ser_dis_param2 = None
@@ -127,7 +131,7 @@ if service_batch:
             ser_batch_dis_param2 = col4.number_input("b", ser_batch_dis_param1+1, step=1, key=21)
         case "Normal":
             ser_batch_dis_param1 = col3.number_input("mean", step=0.01, key=22)
-            ser_batch_dis_param2 = col4.number_input("sd", step=0.01, key=23)
+            ser_batch_dis_param2 = col4.number_input("sd", 0.01, step=0.01, key=23)
         case "Poisson":
             ser_batch_dis_param1 = col3.number_input("p", 0.01, step=0.01, key=24)
             ser_batch_dis_param2 = None
@@ -198,7 +202,7 @@ if priority_customer:
             ser_tp_dis_param2 = col4.number_input("b", ser_tp_dis_param1+0.01, step=0.01, key=27)
         case "Normal":
             ser_tp_dis_param1 = col3.number_input("mean", step=0.01, key=28)
-            ser_tp_dis_param2 = col4.number_input("sd", step=0.01, key=29)
+            ser_tp_dis_param2 = col4.number_input("sd", 0.01, step=0.01, key=29)
         case "Exponential":
             ser_tp_dis_param1 = col3.number_input("\u03BB", 0.01, step=0.01, key=30)
             ser_tp_dis_param2 = None
@@ -289,36 +293,70 @@ st.header("Simulation")
 
 st.write("")
 if st.button("Start Simulation", type="primary"):
-    event_heap = EventHeap()
-    simulation = Simulation(
-        event_heap,
-        queue_capacity,
-        no_of_servers,
-        arrival_distribution,
-        service_distribution,
-        discipline,
-        t_star,
-        k_star,
-        speed,
-        duration,
-        arrival_batch_probability,
-        arrival_batch_distribution,
-        service_batch_probability,
-        service_batch_distribution,
-        service_dependency,
-        service_dependency_start,
-        service_dependency_half,
-        service_dependency_stop,
-        server_select_rand_probability,
-        priority_probability,
-        priority_service_distribution,
-        bulk,
-        bulk_start,
-        bulk_half,
-        bulk_stop,
-        renege,
-        renege_start,
-        renege_half,
-        renege_stop
-    )
-    simulation.run()
+    with st.spinner(text="simulating..."):
+        event_heap = EventHeap()
+        simulation = Simulation(
+            event_heap,
+            queue_capacity,
+            no_of_servers,
+            arrival_distribution,
+            service_distribution,
+            discipline,
+            t_star,
+            k_star,
+            speed,
+            duration,
+            arrival_batch_probability,
+            arrival_batch_distribution,
+            service_batch_probability,
+            service_batch_distribution,
+            service_dependency,
+            service_dependency_start,
+            service_dependency_half,
+            service_dependency_stop,
+            server_select_rand_probability,
+            priority_probability,
+            priority_service_distribution,
+            bulk,
+            bulk_start,
+            bulk_half,
+            bulk_stop,
+            renege,
+            renege_start,
+            renege_half,
+            renege_stop
+        )
+
+        simulation.run()
+
+        st.markdown(f"""
+                    |Statistics|Result|
+                    |:-|:-:|
+                    |All Time Customers|{simulation.system.all_time_no_of_customers}|
+                    |All Time Customers in System|{simulation.system.all_time_no_of_customers_system}|
+                    |Average Customers in System|{simulation.system.average_no_of_customers_system}|
+                    |Average Time Spent per Customers in System|{simulation.system.average_time_spent_per_customer}|
+                    |All Time Customers in Queue|{simulation.system.all_time_no_of_customers_queue}|
+                    |Average Customers in Queue|{simulation.system.queue.average_no_of_customers}|
+                    |Average Time Spent per Customers in Queue|{simulation.system.queue.average_time_spent_per_customer}|
+                    |All Time Customers in Service Center|{simulation.system.all_time_no_of_customers_service_center}|
+                    |Average Customers in Service Center|{simulation.system.service_center.average_no_of_customers}|
+                    |Average Time Spent per Customers in Service Center|{simulation.system.service_center.average_time_spent_per_customer}|
+                    |Departed Customers|{simulation.system.no_of_finished_customers} ({round(100*simulation.system.no_of_finished_customers/simulation.system.all_time_no_of_customers, 2)}%)|
+                    |Still Waiting Customers|{simulation.system.no_of_unfinished_customers} ({round(100*simulation.system.no_of_unfinished_customers/simulation.system.all_time_no_of_customers, 2)}%)|
+                    |Still Waiting Customers in Queue|{len(simulation.system.queue)} ({round(100*len(simulation.system.queue)/simulation.system.no_of_unfinished_customers, 2)}%)|
+                    |Still Waiting Customers in Service Center|{len(simulation.system.service_center)} ({round(100*len(simulation.system.service_center)/simulation.system.no_of_unfinished_customers, 2)}%)|
+                    |Turned Away Customers Due to Maximum Capacity|{simulation.system.no_of_customers_turned_away} ({round(100*simulation.system.proportion_of_customers_turned_away, 2)}%)|
+                    |Bulked Customers|{simulation.system.no_of_bulking} ({round(100*simulation.system.proportion_of_bulking, 2)}%)|
+                    |Reneged Customers|{simulation.system.queue.no_of_reneging} ({round(100*simulation.system.queue.proportion_of_reneging, 2)}%)|
+                    |Customers Skip Queue to Service Center|{simulation.system.no_of_customers_skip_queue} ({round(100*simulation.system.proportion_of_customers_skip_queue, 2)}%)|
+                    |Customers Delayed Longer than {simulation.system.queue.t_star}s|{simulation.system.queue.no_of_customers_delayed_longer_t_star} ({round(100*simulation.system.queue.proportion_of_customers_delayed_longer_t_star, 2)}%)|
+                    |Percent of Time Queue Contained More than {simulation.system.queue.k_star}|{simulation.system.queue.total_time_queue_contains_more_k_star_customers} ({round(100*simulation.system.queue.proportion_of_time_queue_contains_more_k_star_customers, 2)}%)|
+                    |Arrivals|{simulation.system.no_of_arrivals}|
+                    |Arrival Rate|{simulation.system.arrival_rate}|
+                    |Service Rate|{simulation.system.service_center.service_rate}|
+                    |Average Service Rate|{simulation.system.service_center.average_service_rate}|
+                    |Average Server Utilization|{simulation.system.service_center.average_server_utilization}|
+                    |Average Arrival Batch Size|{simulation.system.average_arrival_batch_size}|
+                    |Average Service Batch Size|{simulation.system.service_center.average_service_batch_size}|
+        """)
