@@ -103,40 +103,6 @@ class Simulation:
             self.TIME_PRECISION
         )
 
-    def measures(self) -> None:
-        logging.info(f"system - no of finished customers: {self.system.no_of_finished_customers}")
-        logging.info(f"system - all time no of customers: {self.system.all_time_no_of_customers}")
-        logging.info(f"system - all time no of customers in system: {self.system.all_time_no_of_customers_system}")
-        logging.info(f"system - all time no of customers in service center: {self.system.all_time_no_of_customers_service_center}")
-        logging.info(f"system - all time no of customers in queue: {self.system.all_time_no_of_customers_queue}")
-        logging.info(f"system - no of unfinished customers: {self.system.no_of_unfinished_customers}")
-        logging.info(f"system - average no of customers: {self.system.average_no_of_customers_system}")
-        logging.info(f"system - average arrival batch size: {self.system.average_arrival_batch_size}")
-        logging.info(f"system - average time spent per customers: {self.system.average_time_spent_per_customer}")
-        logging.info(f"system - no of arrivals: {self.system.no_of_arrivals}")
-        logging.info(f"system - arrival rate: {self.system.arrival_rate}")
-        logging.info(f"system - no of customers skip queue: {self.system.no_of_customers_skip_queue}")
-        logging.info(f"system - proportion of customers skip queue: {self.system.proportion_of_customers_skip_queue}")
-        logging.info(f"system - no of customers turned away: {self.system.no_of_customers_turned_away}")
-        logging.info(f"system - proportion of customers turned away: {self.system.proportion_of_customers_turned_away}")
-        logging.info(f"system - no of bulking: {self.system.no_of_bulking}")
-        logging.info(f"system - proportion of bulking: {self.system.proportion_of_bulking}")
-        logging.info(f"service center - no of customers: {self.system.service_center.no_of_customers}")
-        logging.info(f"service center - average no of customers: {self.system.service_center.average_no_of_customers}")
-        logging.info(f"service center - average service rate: {self.system.service_center.average_service_rate}")
-        logging.info(f"service center - average server utilization: {self.system.service_center.average_server_utilization}")
-        logging.info(f"service center - average service batch size: {self.system.service_center.average_service_batch_size}")
-        logging.info(f"service center - average time spent per customer: {self.system.service_center.average_time_spent_per_customer}")
-        logging.info(f"queue - no of exited customers: {self.system.queue.no_of_exited_customers}")
-        logging.info(f"queue - average no of customers: {self.system.queue.average_no_of_customers}")
-        logging.info(f"queue - average time spent per customer: {self.system.queue.average_time_spent_per_customer}")
-        logging.info(f"queue - no of customers delayed longer {self.system.queue.t_star} star: {self.system.queue.no_of_customers_delayed_longer_t_star}")
-        logging.info(f"queue - proportion of customers delayed longer {self.system.queue.t_star} star: {self.system.queue.proportion_of_customers_delayed_longer_t_star}")
-        logging.info(f"queue - total time queue contains more {self.system.queue.k_star} star customers: {self.system.queue.total_time_queue_contains_more_k_star_customers}")
-        logging.info(f"queue - proportion of time queue contains more {self.system.queue.k_star} star customers: {self.system.queue.proportion_of_time_queue_contains_more_k_star_customers}")
-        logging.info(f"queue - no of reneging: {self.system.queue.no_of_reneging}")
-        logging.info(f"queue - proportion of reneging: {self.system.queue.proportion_of_reneging}")
-
     def initiate_events(self):
         arrival_times = np.cumsum(
             [distribution(self.arrival_distribution, self.TIME_PRECISION) for _ in range(self.INITIAL_NO_OF_ARRIVALS)]
@@ -175,9 +141,9 @@ class Simulation:
         return boolean_function(self.priority_probability)
 
     def create_customer(self, time: float) -> list[Customer]:
-        no_customer_in_arrival = round(
+        no_customer_in_arrival = int(round(
             distribution(self.arrival_batch_distribution, self.TIME_PRECISION, is_integer=True), self.TIME_PRECISION
-        ) if self.is_arrival_batch() else 1
+        )) if self.is_arrival_batch() else 1
         priority = self.is_priority()
         customer = []
         for _ in range(no_customer_in_arrival):
@@ -215,21 +181,3 @@ class Simulation:
             else:
                 self.update_manager(self.floored_time(event.time))
                 self.event_manager(event)
-
-
-if __name__ == '__main__':
-    event_heap = EventHeap()
-    s = Simulation(
-        event_heap,
-        2000,
-        3,
-        "Exponential(2)",
-        "Exponential(6)",
-        "FIFO",
-        5,
-        5,
-        None,
-        1000,
-    )
-    s.run()
-    s.measures()

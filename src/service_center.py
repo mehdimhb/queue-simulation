@@ -129,6 +129,10 @@ class ServiceCenter:
         return self.average_among_servers('service_rate', 'total_service_time')
 
     @property
+    def service_rate(self):
+        return round(sum([server.service_rate for server in self.servers.combine_servers()]), PRECISION)
+
+    @property
     def average_server_utilization(self):
         return round(np.mean([server.server_utilization for server in self.servers.combine_servers()]), PRECISION)
 
@@ -160,7 +164,7 @@ class ServiceCenter:
         )
 
     def no_of_customers_in_next_service(self) -> int:
-        return round(distribution(self.service_batch_distribution, self.time_precision, is_integer=True), PRECISION) \
+        return int(round(distribution(self.service_batch_distribution, self.time_precision, is_integer=True), PRECISION)) \
             if self.is_service_batch() else 1
 
     def average_among_servers(self, stat: str, coef: str) -> float:
@@ -234,5 +238,6 @@ class ServiceCenter:
                         server.no_of_served_customers+server.no_of_unserved_customers+len(service.customer)
                     )
                     server.no_of_unserved_customers += len(service.customer)
+                    server.system_time = time
                     server.total_service_time += round(server.total_service_time+time-service.start, PRECISION)
                     server.no_of_unfinished_services += 1
