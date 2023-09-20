@@ -26,7 +26,7 @@ no_of_servers = col2.number_input("Number of Servers", 0, step=1)
 speed = col3.slider("Simulation Speed", 0, 3, step=1)
 if speed == 3:
     speed = None
-duration = col4.slider("Simulation Duration", 100, 5000, step=100)
+duration = col4.slider("Simulation Duration", 100, 10000, step=100)
 
 # arrival settings
 st.subheader("Arrival Settings")
