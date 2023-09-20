@@ -19,14 +19,13 @@ st.header("Settings")
 # general settings
 st.subheader("General Settings")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns([1, 1, 2])
 
 queue_capacity = col1.number_input("Queue Capacity", 0, step=1)
 no_of_servers = col2.number_input("Number of Servers", 0, step=1)
-speed = col3.slider("Simulation Speed", 0, 3, step=1)
-if speed == 3:
-    speed = None
-duration = col4.slider("Simulation Duration", 100, 10000, step=100)
+# speed = col3.slider("Simulation Speed", 0, 3, step=1)
+speed = None
+duration = col3.slider("Simulation Duration", 500, 50000, step=500)
 
 # arrival settings
 st.subheader("Arrival Settings")
